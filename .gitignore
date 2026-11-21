@@ -1,0 +1,4 @@
+prior-attempts/
+**/.DS_Store
+node_modules/
+dist/
