@@ -3,11 +3,11 @@ import type { Scenario } from './types';
 export const BASE: Scenario = {
  id:'middle',name:'01 · Practical middle',rationale:'Middle-of-the-road 15 visits, eight optional. Friday evening seats succeed 65% of the time; prepaid Sunday protection creates some sunk-ticket exposure. Committed weekends try early GoWild only when it beats buying Frontier normally.',
  weekends:15,optionalWeekends:8,replacePct:90,optionalOut:'late',optionalReturn:'early-advance',committedOut:'early-advance',committedReturn:'early-advance',
- fareFri:140,fareSun:165,lateFareFri:230,lateFareSun:270,passPrice:399,gwTaxes:15,earlyFeeFri:69,earlyFeeSun:69,
+ fareFri:140,fareSun:165,lateFareFri:230,lateFareSun:270,card:false,cardAnnualFee:99,cardBonusMiles:50000,awardMilesPerFlight:5000,awardFlightShare:50,awardFees:5.6,cardMilesPerDollar:17,cardEligiblePct:80,mileValueCents:1,discountDen:false,denMembershipCost:69.99,denPassDiscount:50,passPrice:399,gwTaxes:15,earlyFeeFri:69,earlyFeeSun:69,
  lateSuccessFri:65,lateSuccessSun:60,earlyOfferFri:65,earlyOfferSun:70,
  peakShareFri:8,peakShareSun:10,peakChargeFri:89,peakChargeSun:89,feeStack:'sum',
  carryShare:0,checkedShare:0,regularCarry:48,gwCarry:65,regularChecked:45,gwChecked:65,
- seatExtra:0,annualFriction:0,sunkReturnPct:100,incrementalVisitValue:0
+ seatExtra:0,annualFriction:0,sunkReturnPct:100,optionalReturnFlexPremium:0,incrementalVisitValue:0
 };
 export const SEEDS: Scenario[] = [
  { ...BASE, id:'skeptic', name:'01 · Skeptical / low fares', rationale:'Stress test: only 12 trips, cheaper regular tickets, weak Friday availability, high early charges, and more peak exposure. Shows how the pass can lose money without assuming that every failed optional trip forces an emergency purchase.',

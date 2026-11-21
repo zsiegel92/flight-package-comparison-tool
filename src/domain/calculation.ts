@@ -42,6 +42,9 @@ export function calculateScenario(s:Scenario):Result {
  };
  const out=optOut();
  const optReturn:LegPlan = s.optionalReturn==='advance' ? advance('sun') : s.optionalReturn==='early-advance' ? earlyAdvance('sun') : s.optionalReturn==='late-backup' ? lateBackup('sun') : earlyLateBackup('sun');
+ const prepaidProbability = s.optionalReturn === 'advance' || s.optionalReturn === 'early-advance' ? 1 : s.optionalReturn === 'early-late-backup' ? earlyEffective('sun') : 0;
+ optReturn.cost += prepaidProbability * s.optionalReturnFlexPremium;
+ optReturn.prepaid += prepaidProbability * s.optionalReturnFlexPremium;
  const cFri=committed('fri',s.committedOut),cSun=committed('sun',s.committedReturn);
  const nOpt=Math.min(s.weekends,s.optionalWeekends), nComm=Math.max(0,s.weekends-nOpt);
  const p=out.probability, success=nOpt*p;
@@ -54,16 +57,26 @@ export function calculateScenario(s:Scenario):Result {
  const optValue=success*(replacement*baseline-optionalTripCost)-sunk;
  const commValue=nComm*(baseline-cFri.cost-cSun.cost);
  const cashGross=optValue+commValue;
- const net=cashGross-s.passPrice-s.annualFriction;
+ const fixedCost = s.passPrice + s.annualFriction + (s.discountDen ? s.denMembershipCost : 0) + (s.card ? s.cardAnnualFee : 0) - (s.discountDen || s.card ? Math.min(s.passPrice, s.denPassDiscount) : 0);
  const gwCount=nOpt*(out.weightedGw+p*optReturn.gw)+nComm*(cFri.gw+cSun.gw);
+ // Illustrative pro-rata allocation across completed non-GoWild legs; use only welcome miles.
+ const regularLegs = Math.max(0, 2*(nComm+success)-gwCount);
+ const awardFlights = s.card && s.awardMilesPerFlight > 0 ? Math.min(regularLegs*pct(s.awardFlightShare), s.cardBonusMiles/s.awardMilesPerFlight) : 0;
+ const awardSavings = awardFlights * Math.max(0, (s.fareFri+s.fareSun)/2-s.awardFees);
+ const net=cashGross-fixedCost+awardSavings;
+ // Estimate net retained spending: forfeited prepaid amounts count, recovered value does not.
+ const estimatedFrontierSpend = Math.max(0, s.passPrice - (s.discountDen || s.card ? Math.min(s.passPrice, s.denPassDiscount) : 0)) + (s.discountDen ? s.denMembershipCost : 0) + nOpt * (out.weightedCost + p * optReturn.cost) + sunk + nComm * (cFri.cost + cSun.cost) - awardSavings;
+ const estimatedEligibleSpend = estimatedFrontierSpend * pct(s.cardEligiblePct);
  const estimatedLateGW=nOpt*((s.optionalOut==='late'?p:s.optionalOut==='early-late'?(1-earlyEffective('fri'))*lateProb('fri'):0)+p*(s.optionalReturn==='late-backup'?lateProb('sun'):s.optionalReturn==='early-late-backup'?(1-earlyEffective('sun'))*lateProb('sun'):0)) + nComm*((s.committedOut==='late-backup'?lateProb('fri'):0)+(s.committedReturn==='late-backup'?lateProb('sun'):0));
  const breakRT=Math.max(0,baseline-2*(s.gwTaxes+passBag+s.seatExtra+((pct(s.peakShareFri)*s.peakChargeFri+pct(s.peakShareSun)*s.peakChargeSun)/2)));
  return {
    committedCount:nComm,optionalCount:nOpt,successVisits:nComm+success,skippedVisits:nOpt*(1-p),
+   awardFlights, awardSavings, estimatedFrontierSpend, estimatedEligibleSpend,
+   pointsValue: s.card ? (s.cardBonusMiles - awardFlights*s.awardMilesPerFlight + s.cardMilesPerDollar * estimatedEligibleSpend) * s.mileValueCents / 100 : 0,
    optionalValue:optValue,committedValue:commValue,grossCash:cashGross,netCash:net,
    netWithVisitValue:net+success*(1-replacement)*s.incrementalVisitValue,sunkExposure:sunk,
    expectedGwLegs:gwCount,lateGwLegs:estimatedLateGW,earlyGwLegs:Math.max(0,gwCount-estimatedLateGW),
    baselineRoundtrip:baseline,optionalOut:out,optionalReturn:optReturn,commFri:cFri,commSun:cSun,
-   passBreakEvenRT:breakRT>0?Math.ceil((s.passPrice+s.annualFriction)/breakRT):Infinity
+   passBreakEvenRT:breakRT>0?Math.ceil(fixedCost/breakRT):Infinity
  };
 }
