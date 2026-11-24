@@ -27,23 +27,35 @@ const perks = [
 	},
 	{
 		name: "Free carry-on and Group 1 boarding",
-		sources: ["card"],
-		requiresGold: true,
+		sources: ["gold"],
 		detail: "Elite Gold benefits also apply to eligible GoWild bookings.",
 		url: "https://faq.flyfrontier.com/help/im-already-a-frontier-miles-elite-member-do-i-enjoy-my-elite-benefits-on-tickets-booked-using-a-gowild-pass",
 	},
 	{
+		name: "Cancel for travel credit without a fee",
+		sources: ["gold"],
+		detail:
+			"For eligible 2026 bookings, Gold waives the fee if you cancel at least 7 days before departure. Verify eligibility if you booked before Gold posted. An Economy Fare or qualifying bundle also waives the fee. Basic fares booked now normally have a $149 fee each way without a waiver.",
+		url: "https://www.flyfrontier.com/frontiermiles/terms-and-conditions/",
+	},
+	{
+		name: "24-hour refund",
+		sources: [],
+		policyLabel: "Ticket policy",
+		detail:
+			"Refund to the original payment method if you cancel within 24 hours of booking and departure was at least 7 days away when you booked.",
+		url: "https://faq.flyfrontier.com/help/can-i-get-a-refund-if-i-cancel-my-flight",
+	},
+	{
 		name: "Elite seating upgrades",
-		sources: ["card"],
-		requiresGold: true,
+		sources: ["gold"],
 		detail:
 			"For bookings from January 2027, eligible Economy or Premium bundles may get UpFront Plus or First Class upgrades 8 hours before departure. Economy can also qualify for premium seating.",
 		url: "https://www.flyfrontier.com/frontiermiles/elite-status-benefits/?mobile=true",
 	},
 	{
 		name: "Family pooling and priority customer care",
-		sources: ["card"],
-		requiresGold: true,
+		sources: ["gold"],
 		detail: "Included through Silver benefits inherited by Gold.",
 		url: "https://www.flyfrontier.com/frontiermiles/elite-status-benefits/?mobile=true",
 	},
@@ -64,7 +76,7 @@ const perks = [
 		name: "Access to GoWild fares",
 		sources: ["goWild"],
 		detail:
-			"For the passholder. Domestic standard booking opens the day before departure. Early booking and peak dates may cost extra.",
+			"For the passholder. Domestic standard booking opens the day before departure. Early booking and peak dates may cost extra. Booked GoWild tickets follow the applicable cancellation rules.",
 		url: "https://www.flyfrontier.com/deals/gowild-pass/",
 	},
 	{
@@ -95,6 +107,9 @@ const choices = [
 	{ key: "goWild", name: "GoWild" },
 	{ key: "discountDen", name: "Discount Den" },
 ] as const;
+
+const perkSources = [...choices, { key: "gold", name: "Gold" }] as const;
+type PerkSource = (typeof perkSources)[number]["key"];
 
 function productName(p: Purchases) {
 	return (
@@ -286,7 +301,7 @@ export default function PurchaseComparison({
 					<thead>
 						<tr>
 							<th scope="col">Perk</th>
-							{choices.map(({ key, name }) => (
+							{perkSources.map(({ key, name }) => (
 								<th scope="col" key={key}>
 									{name}
 								</th>
@@ -295,10 +310,12 @@ export default function PurchaseComparison({
 					</thead>
 					<tbody>
 						{perks.map((perk) => {
-							const sources: readonly (keyof Purchases)[] = perk.sources;
-							const active = (key: keyof Purchases) =>
-								purchases[key] && (!("requiresGold" in perk) || gold);
+							const sources: readonly PerkSource[] = perk.sources;
+							const active = (key: PerkSource) =>
+								key === "gold" ? purchases.card && gold : purchases[key];
 							const available = sources.some(active);
+							const policyLabel =
+								"policyLabel" in perk ? perk.policyLabel : undefined;
 							return (
 								<tr
 									key={perk.name}
@@ -306,17 +323,23 @@ export default function PurchaseComparison({
 								>
 									<th scope="row">
 										<strong>
-											{available ? perk.name : <s>{perk.name}</s>}
+											{available || policyLabel ? (
+												perk.name
+											) : (
+												<s>{perk.name}</s>
+											)}
 										</strong>
-										{available && (
-											<span className="perk-status">Available</span>
+										{(available || policyLabel) && (
+											<span className="perk-status">
+												{policyLabel ?? "Available"}
+											</span>
 										)}
 										<small>
 											{perk.detail}{" "}
 											{"url" in perk && <a href={perk.url}>Terms</a>}
 										</small>
 									</th>
-									{choices.map(({ key, name }) => (
+									{perkSources.map(({ key, name }) => (
 										<td key={key}>
 											{sources.includes(key) ? (
 												<input
