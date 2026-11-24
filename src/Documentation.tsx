@@ -66,21 +66,14 @@ export default function Documentation() {
 				<div className="doc-panel">
 					<h3>Discount Den</h3>
 					<p>
-						When selected, the model adds the membership cost and subtracts the
-						pass discount. Enter expected Den fares in the regular and backup
-						fare fields; the model does not estimate fare discounts
-						automatically. This compares against those entered regular fares
-						without a Den membership cost in the baseline, so it does not
-						isolate GoWild versus buying Den alone. Check current prices and
-						terms at{" "}
-						<a
-							href="https://www.flyfrontier.com/deals/discount-den/"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							Frontier
+						Enter public fares in the regular and backup fare fields. Use your
+						observed average Discount Den saving per paid leg in the separate
+						Den field. The model includes the membership and enrollment costs
+						and applies the GoWild pass discount once if either the card or Den
+						qualifies.{" "}
+						<a href="https://www.flyfrontier.com/deals/discount-den/">
+							Frontier membership terms
 						</a>
-						.
 					</p>
 				</div>
 				<div className="doc-panel">
@@ -138,22 +131,20 @@ export default function Documentation() {
 			<div className="formula">
 				<h3>Core expected-value calculation</h3>
 				<div className="formula-text">
-					Net cash savings = savings on completed optional weekends + savings on
-					committed weekends − forfeited prepaid returns − annual pass − other
-					annual costs.
+					Expected cash cost = card and membership fees + Christmas + weekend
+					bookings and forfeited returns − cash offsets from redeemed miles.
 				</div>
 				<p>
-					For optional weekends, completed-trip savings are weighted by{" "}
-					<b>Friday departure success</b> and by your{" "}
-					<b>paid-fare replacement share</b>. A skipped optional weekend is not
-					falsely treated as cash saved. Early GoWild is taken only where its
-					estimated all-in price is cheaper than the ordinary advance fare. On
-					late-booking failure, a committed or Sunday leg uses the specified
-					last-minute backup price.
+					Target weekends not taken are reported separately. Cash totals include
+					any forfeited prepaid return for a skipped visit. The award share and
+					prices are estimates, and unused miles stay visible in the audit. The
+					model assumes one paid term per selected product and that benefits are
+					available for the modeled bookings. Confirm coverage for any travel
+					after your membership expires.
 				</p>
 			</div>
 			<h3 className="sources-heading">
-				Primary Frontier references <span>verified November 21, 2026</span>
+				Primary Frontier references <span>verified November 24, 2026</span>
 			</h3>
 			<div className="source-grid">
 				{SOURCES.map((s) => (

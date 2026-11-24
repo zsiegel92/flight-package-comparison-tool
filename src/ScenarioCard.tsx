@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
-import { calculateScenario } from "./domain/calculation";
-import type { Scenario } from "./domain/types";
-import { cash, clamp, fmt, numeric, signed } from "./format";
+import type { Result, Scenario } from "./domain/types";
+import { cash, clamp, fmt, numeric } from "./format";
 import { Cite, Icon } from "./reference";
 
 function Field(p: {
@@ -117,6 +116,7 @@ export const COMMITTED_OPTIONS = [
 ];
 export default function ScenarioCard(p: {
 	s: Scenario;
+	result: Result;
 	index: number;
 	onField: (
 		id: string,
@@ -127,7 +127,7 @@ export default function ScenarioCard(p: {
 	onDelete: (id: string) => void;
 }) {
 	const s = p.s,
-		r = calculateScenario(s);
+		r = p.result;
 	const set = (key: keyof Scenario) => (v: Scenario[keyof Scenario]) =>
 		p.onField(s.id, key, v);
 	const fld = (
@@ -193,27 +193,9 @@ export default function ScenarioCard(p: {
 			</div>
 			<div className="result">
 				<div>
-					<span className="eyebrow">
-						FIRST-YEAR VALUE · CASH + ESTIMATED MILES
-					</span>
-					<div
-						className={
-							"result-number " +
-							(r.netCash + r.pointsValue >= 0 ? "positive" : "negative")
-						}
-					>
-						{signed(r.netCash + r.pointsValue)}
-					</div>
+					<span className="eyebrow">Expected total cash cost</span>
+					<div className="result-number">{cash(r.totalCost)}</div>
 				</div>
-				<span
-					className={
-						"status " + (r.netCash + r.pointsValue >= 0 ? "ok" : "not-ok")
-					}
-				>
-					{r.netCash + r.pointsValue >= 0
-						? "Positive expectation"
-						: "Below break-even"}
-				</span>
 			</div>
 			<div className="stats-grid">
 				<div>
@@ -304,58 +286,37 @@ export default function ScenarioCard(p: {
 					open
 					subtitle="All prices are per one-way flight"
 				>
-					<label className="den-toggle">
-						<input
-							type="checkbox"
-							checked={s.card}
-							onChange={(e) => set("card")(e.target.checked)}
-						/>{" "}
-						Include Frontier credit card
-					</label>
 					<div className="field-grid">
-						{fld("cardAnnualFee", "Card annual fee", "$")}
-						{fld("cardBonusMiles", "First-year welcome miles")}
+						{fld("christmasFare", "Christmas 2026 regular round trip", "$")}
+						{fld(
+							"christmasGoWildQuote",
+							"Confirmed Christmas GoWild round trip",
+							"$",
+							"Enter the all-in quote including taxes, peak and early charges, and any bags. Leave at zero to book regular fares now.",
+						)}
+						{fld(
+							"denSavingPerLeg",
+							"Average Discount Den saving per paid leg",
+							"$",
+							"Compare the public and member fares for your dates. Average across all booked legs, including those without a discount.",
+						)}
 						{fld("awardMilesPerFlight", "Miles per award flight")}
 						{fld(
 							"awardFlightShare",
-							"Regular flights booked with miles",
+							"Regular weekend flights with usable awards",
 							"%",
 							undefined,
 							undefined,
 							100,
 						)}
 						{fld("awardFees", "Award taxes and fees", "$")}
-						{fld("cardMilesPerDollar", "Miles per eligible dollar")}
+						{fld("ancillaryAwardMiles", "Bonus miles reserved for extras")}
 						{fld(
-							"cardEligiblePct",
-							"Estimated spend earning miles",
-							"%",
-							"Approximate eligible portion; taxes and earning rates vary.",
-							undefined,
-							100,
+							"ancillaryAwardValue",
+							"Eligible weekend extras offset by those miles",
+							"$",
+							"Use a confirmed award quote for extras already included in the weekend budget.",
 						)}
-						{fld("mileValueCents", "Value per mile (cents)")}
-					</div>
-					<p className="section-intro">
-						Award redemptions use the bonus only, cap at available regular legs,
-						and approximate avoided fares using the average Friday/Sunday fare.
-						Spent miles are removed from remaining value; award availability and
-						bonus timing are assumptions. Spending is calculated from expected
-						bookings, pass and Den; the eligible percentage is an estimate. 17×
-						is an illustrative total, not guaranteed on every purchase. Set
-						bonus to zero if ineligible or modeling later years.
-					</p>
-					<label className="den-toggle">
-						<input
-							type="checkbox"
-							checked={s.discountDen}
-							onChange={(e) => set("discountDen")(e.target.checked)}
-						/>{" "}
-						Include Discount Den
-					</label>
-					<div className="field-grid">
-						{fld("denMembershipCost", "Den membership cost", "$")}
-						{fld("denPassDiscount", "Den discount on pass", "$")}
 						{fld(
 							"fareFri",
 							"Normal Friday fare",
@@ -388,7 +349,6 @@ export default function ScenarioCard(p: {
 							undefined,
 							2000,
 						)}
-						{fld("passPrice", "Annual pass cost", "$", undefined, 1, 2000)}
 						{fld(
 							"gwTaxes",
 							"GoWild ticket + taxes / leg",
@@ -618,85 +578,50 @@ export default function ScenarioCard(p: {
 				>
 					<div className="audit">
 						<div>
-							<span>Cash value from optional trips</span>
-							<strong>{signed(r.optionalValue)}</strong>
+							<span>Card, memberships and annual costs</span>
+							<strong>{cash(r.fixedCost)}</strong>
 						</div>
 						<div>
-							<span>Cash value from committed trips</span>
-							<strong>{signed(r.committedValue)}</strong>
+							<span>Christmas round trip</span>
+							<strong>{cash(r.christmasCost)}</strong>
 						</div>
 						<div>
-							<span>
-								Prepaid Sunday tickets at risk <small>(already deducted)</small>
-							</span>
+							<span>Weekend tickets and extras before awards</span>
+							<strong>{cash(r.weekendCost)}</strong>
+						</div>
+						<div>
+							<span>Forfeited prepaid returns (included above)</span>
 							<strong>{cash(r.sunkExposure)}</strong>
 						</div>
 						<div>
-							<span>Expected gross cash value</span>
-							<strong>{signed(r.grossCash)}</strong>
+							<span>Flights booked with bonus miles</span>
+							<strong>{fmt(r.awardFlights)}</strong>
 						</div>
 						<div>
-							<span>Pass, card, Den & annual costs</span>
+							<span>Cash savings from flight and extras awards</span>
+							<strong>{cash(r.awardSavings + r.ancillarySavings)}</strong>
+						</div>
+						<div>
+							<span>Unused bonus miles</span>
 							<strong>
-								−
-								{cash(
-									s.passPrice +
-										s.annualFriction +
-										(s.discountDen ? s.denMembershipCost : 0) +
-										(s.card ? s.cardAnnualFee : 0) -
-										(s.discountDen || s.card
-											? Math.min(s.passPrice, s.denPassDiscount)
-											: 0),
-								)}
+								{Math.round(r.remainingBonusMiles).toLocaleString()}
 							</strong>
 						</div>
 						<div className="audit-total">
-							<span>Expected net cash savings</span>
-							<strong className={r.netCash >= 0 ? "positive" : "negative"}>
-								{signed(r.netCash)}
-							</strong>
+							<span>Expected total cash cost</span>
+							<strong>{cash(r.totalCost)}</strong>
 						</div>
-						{s.card ? (
+						{r.extraVisitValue > 0 && (
 							<div>
-								<span>Expected award flights / airfare saved</span>
-								<strong>
-									{fmt(r.awardFlights)} / {cash(r.awardSavings)}
-								</strong>
+								<span>Subjective value of additional visits</span>
+								<strong>{cash(r.extraVisitValue)}</strong>
 							</div>
-						) : null}
-						{s.card ? (
-							<div>
-								<span>Expected Frontier spend / estimated eligible spend</span>
-								<strong>
-									{cash(r.estimatedFrontierSpend)} /{" "}
-									{cash(r.estimatedEligibleSpend)}
-								</strong>
-							</div>
-						) : null}
-						{s.card ? (
-							<div>
-								<span>Estimated miles value (not cash)</span>
-								<strong>{cash(r.pointsValue)}</strong>
-							</div>
-						) : null}
-						{s.card ? (
-							<div>
-								<span>Net cash plus miles value</span>
-								<strong>{signed(r.netCash + r.pointsValue)}</strong>
-							</div>
-						) : null}
-						{s.incrementalVisitValue > 0 ? (
-							<div>
-								<span>Including optional subjective visit value</span>
-								<strong>{signed(r.netWithVisitValue)}</strong>
-							</div>
-						) : null}
+						)}
 					</div>
 					<p className="section-intro">
 						Optional Friday success ={" "}
 						<b>{(r.optionalOut.probability * 100).toFixed(0)}%</b>.{" "}
-						{r.optionalOut.detail}. Optional Sunday: {r.optionalReturn.note}. No
-						airfare savings are claimed when the optional weekend is skipped.
+						{r.optionalOut.detail}. Optional Sunday: {r.optionalReturn.note}.
 					</p>
 					<p className="section-intro">
 						Every used GoWild fare is compared against the{" "}

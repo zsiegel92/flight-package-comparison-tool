@@ -2,9 +2,15 @@ import { type ChangeEvent, Component } from "react";
 import Documentation from "./Documentation";
 import { calculateScenario } from "./domain/calculation";
 import { BASE, SEEDS } from "./domain/presets";
+import {
+	DEFAULT_PURCHASES,
+	PURCHASE_OPTIONS,
+	type Purchases,
+} from "./domain/purchases";
 import type { Scenario } from "./domain/types";
-import { clamp, fmt, numeric, signed } from "./format";
-import { Cite, Icon, SOURCES } from "./reference";
+import { clamp, numeric } from "./format";
+import PurchaseComparison, { purchaseIndex } from "./PurchaseComparison";
+import { Icon, SOURCES } from "./reference";
 import ScenarioCard, {
 	COMMITTED_OPTIONS,
 	OUT_OPTIONS,
@@ -33,14 +39,8 @@ function sanitize(data: unknown): Scenario {
 			if (typeof fallback === "number") {
 				const max = /pct|share|success|offer/i.test(key) ? 100 : 100000;
 				values[key] = clamp(numeric(value, fallback), 0, max);
-			} else if (
-				(typeof fallback === "boolean" && typeof value === "boolean") ||
-				typeof value === "string"
-			) {
-				values[key] =
-					typeof value === "string"
-						? value.slice(0, key === "rationale" ? 1500 : 120)
-						: value;
+			} else if (typeof value === "string") {
+				values[key] = value.slice(0, key === "rationale" ? 1500 : 120);
 			}
 		}
 	}
@@ -60,23 +60,54 @@ function sanitize(data: unknown): Scenario {
 	if (!COMMITTED_OPTIONS.some(({ id }) => id === scenario.committedReturn))
 		scenario.committedReturn = BASE.committedReturn;
 	if (scenario.feeStack !== "max") scenario.feeStack = "sum";
-	if (!scenario.id) scenario.id = uid();
+	if (
+		!scenario.id ||
+		!data ||
+		typeof data !== "object" ||
+		!Object.hasOwn(data, "id")
+	)
+		scenario.id = uid();
 	return scenario;
 }
 function readInitial(): Scenario[] {
 	try {
 		const raw = JSON.parse(localStorage.getItem("gowild-studio-v1") || "null");
-		if (Array.isArray(raw) && raw.length > 0 && raw.length <= 500)
-			return raw.map(sanitize);
+		if (Array.isArray(raw) && raw.length <= 500) return raw.map(sanitize);
 	} catch {}
 	return SEEDS.map(sanitize);
 }
 interface AppState {
 	scenarios: Scenario[];
+	purchases: Purchases;
+	enrollment: number;
+	gold: boolean;
+}
+
+function readPurchaseSettings(): Pick<
+	AppState,
+	"purchases" | "enrollment" | "gold"
+> {
+	try {
+		const settings = JSON.parse(
+			localStorage.getItem("frontier-purchases-v1") || "null",
+		);
+		if (
+			settings &&
+			typeof settings.purchases?.card === "boolean" &&
+			typeof settings.purchases.goWild === "boolean" &&
+			typeof settings.purchases.discountDen === "boolean"
+		)
+			return {
+				purchases: settings.purchases,
+				enrollment: clamp(numeric(settings.enrollment), 0, 500),
+				gold: settings.gold === true,
+			};
+	} catch {}
+	return { purchases: DEFAULT_PURCHASES, enrollment: 0, gold: false };
 }
 
 export default class App extends Component<Record<string, never>, AppState> {
-	state: AppState = { scenarios: readInitial() };
+	state: AppState = { scenarios: readInitial(), ...readPurchaseSettings() };
 	upload: HTMLInputElement | null = null;
 
 	componentDidMount() {
@@ -91,6 +122,19 @@ export default class App extends Component<Record<string, never>, AppState> {
 		_: Readonly<Record<string, never>>,
 		prev: Readonly<AppState>,
 	) {
+		const { purchases, enrollment, gold } = this.state;
+		if (
+			purchases !== prev.purchases ||
+			enrollment !== prev.enrollment ||
+			gold !== prev.gold
+		) {
+			try {
+				localStorage.setItem(
+					"frontier-purchases-v1",
+					JSON.stringify({ purchases, enrollment, gold }),
+				);
+			} catch {}
+		}
 		if (this.state.scenarios !== prev.scenarios) {
 			try {
 				localStorage.setItem(
@@ -175,9 +219,14 @@ export default class App extends Component<Record<string, never>, AppState> {
 				const arr = Array.isArray(data) ? data : data.scenarios;
 				if (!Array.isArray(arr) || arr.length > 500)
 					throw Error("Invalid scenario list");
-				this.setState({
-					scenarios: arr.map((d: unknown) => ({ ...sanitize(d), id: uid() })),
+				const ids = new Set<string>();
+				const scenarios = arr.map((data: unknown) => {
+					const scenario = sanitize(data);
+					while (ids.has(scenario.id)) scenario.id = uid();
+					ids.add(scenario.id);
+					return scenario;
 				});
+				this.setState({ scenarios });
 			} catch {
 				alert("Could not import a valid scenarios JSON file.");
 			}
@@ -186,9 +235,13 @@ export default class App extends Component<Record<string, never>, AppState> {
 		reader.readAsText(f);
 	};
 	render() {
-		const scenarios = this.state.scenarios,
-			results = scenarios.map(calculateScenario),
-			positive = results.filter((r) => r.netCash + r.pointsValue >= 0).length;
+		const { scenarios, purchases, enrollment, gold } = this.state;
+		const matrix = scenarios.map((s) =>
+			PURCHASE_OPTIONS.map((choice) =>
+				calculateScenario(s, choice, enrollment, gold),
+			),
+		);
+		const selected = purchaseIndex(purchases);
 		return (
 			<main className="shell">
 				<header className="topline">
@@ -211,59 +264,33 @@ export default class App extends Component<Record<string, never>, AppState> {
 						ORLANDO ⇄ PHILADELPHIA · FRIDAY / SUNDAY
 					</div>
 					<h1>
-						Does the $399 GoWild pass
-						<br />
-						<span>actually pay for itself?</span>
+						Which Frontier purchases <span>pay off?</span>
 					</h1>
 					<p>
-						Compare unlimited scenarios for a recurring commute to see your
-						wife. Model optional weekends you can skip, protected Sunday
-						returns, early-booking charges, seat availability, peak-day
-						surcharges, and{" "}
-						<em>real savings versus ordinary Frontier tickets</em>.
+						Compare GoWild, Discount Den and the Mastercard using your expected
+						Orlando–Philadelphia weekends and Christmas trip.
 					</p>
-					<div className="hero-chip-row">
-						<span>
-							<Icon name="shield" size={15} /> No forced backup fare for skipped
-							optional Fridays
-						</span>
-						<span>
-							<Icon name="chart" size={15} /> Direction-specific economics
-						</span>
-						<span>
-							<Icon name="calendar" size={15} /> Five editable starting cases
-						</span>
-					</div>
 				</section>
-				<div className="metrics">
-					<div className="metric">
-						<span>Scenarios in your workspace</span>
-						<strong>{scenarios.length}</strong>
-					</div>
-					<div className="metric">
-						<span>Expected positive returns</span>
-						<strong>
-							{positive} <small>/ {scenarios.length}</small>
-						</strong>
-					</div>
-					<div className="metric">
-						<span>
-							Published pass offer <Cite n={1} />
-						</span>
-						<strong>$399</strong>
-					</div>
-					<div className="metric">
-						<span>
-							Normal domestic GoWild window <Cite n={1} />
-						</span>
-						<strong>Day before</strong>
-					</div>
-				</div>
+				<PurchaseComparison
+					purchases={purchases}
+					enrollment={enrollment}
+					gold={gold}
+					onGold={(value) => this.setState({ gold: value })}
+					onPurchase={(key, value) =>
+						this.setState((state) => ({
+							purchases: { ...state.purchases, [key]: value },
+						}))
+					}
+					onEnrollment={(value) => this.setState({ enrollment: value })}
+					scenarios={scenarios}
+					matrix={matrix}
+				/>
 				<div className="controls">
 					<div>
-						<h2>Scenario comparison</h2>
+						<h2>Trip scenarios</h2>
 						<p>
-							Click a scenario name to edit its complete set of assumptions.
+							Edit the trip, fare and booking assumptions behind each
+							comparison.
 						</p>
 					</div>
 					<div className="buttonbar">
@@ -281,7 +308,7 @@ export default class App extends Component<Record<string, never>, AppState> {
 							<Icon name="upload" /> Import
 						</button>
 						<button type="button" className="btn" onClick={this.restore}>
-							<Icon name="reset" /> Reset examples
+							<Icon name="reset" /> Reset scenarios to default
 						</button>
 						<input
 							type="file"
@@ -294,75 +321,12 @@ export default class App extends Component<Record<string, never>, AppState> {
 						/>
 					</div>
 				</div>
-				<div className="comparison">
-					<table>
-						<thead>
-							<tr>
-								<th>Scenario</th>
-								<th>Visits planned</th>
-								<th>Optional / committed</th>
-								<th>Expected completed</th>
-								<th>GoWild legs</th>
-								<th>Before pass</th>
-								<th>First-year cash + miles</th>
-							</tr>
-						</thead>
-						<tbody>
-							{scenarios.map((s, i) => {
-								const r = results[i];
-								return (
-									<tr key={s.id}>
-										<td>
-											<a href={"#card-" + s.id}>
-												{s.name} <Icon name="chevron" size={13} />
-											</a>
-										</td>
-										<td>{s.weekends}</td>
-										<td>
-											{r.optionalCount} / {r.committedCount}
-										</td>
-										<td>{fmt(r.successVisits)}</td>
-										<td>{fmt(r.expectedGwLegs)}</td>
-										<td className={r.grossCash >= 0 ? "positive" : "negative"}>
-											{signed(r.grossCash)}
-										</td>
-										<td>
-											<b
-												className={
-													r.netCash + r.pointsValue >= 0
-														? "positive"
-														: "negative"
-												}
-											>
-												{signed(r.netCash + r.pointsValue)}
-											</b>
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
-					{scenarios.length === 0 ? (
-						<div className="empty">
-							No scenarios yet. Add one or reset to the five examples.
-						</div>
-					) : null}
-				</div>
-				<div className="section-head">
-					<div>
-						<h2>Explore each scenario</h2>
-						<p>
-							All fields, assumptions, rationales, and results update
-							immediately. Cards are independent and can be duplicated without
-							limit.
-						</p>
-					</div>
-				</div>
 				<div className="scenario-grid">
 					{scenarios.map((s, i) => (
 						<ScenarioCard
 							key={s.id}
 							s={s}
+							result={matrix[i][selected]}
 							index={i}
 							onField={this.update}
 							onCopy={this.duplicate}
