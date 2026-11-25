@@ -1,12 +1,8 @@
 import { type ChangeEvent, Component } from "react";
 import Documentation from "./Documentation";
-import { calculateScenario } from "./domain/calculation";
+import { comparePurchases } from "./domain/calculation";
 import { BASE, SEEDS } from "./domain/presets";
-import {
-	DEFAULT_PURCHASES,
-	PURCHASE_OPTIONS,
-	type Purchases,
-} from "./domain/purchases";
+import { DEFAULT_PURCHASES, type Purchases } from "./domain/purchases";
 import type { Scenario } from "./domain/types";
 import { clamp, numeric } from "./format";
 import PurchaseComparison, {
@@ -185,7 +181,9 @@ export default class App extends Component<Record<string, never>, AppState> {
 		}));
 	restore = () => {
 		if (
-			confirm("Replace all current scenarios with the five example scenarios?")
+			confirm(
+				`Replace all current scenarios with the ${SEEDS.length} example scenarios?`,
+			)
 		)
 			this.setState({ scenarios: SEEDS.map(sanitize) });
 	};
@@ -230,9 +228,7 @@ export default class App extends Component<Record<string, never>, AppState> {
 	};
 	render() {
 		const { scenarios, purchases, gold } = this.state;
-		const matrix = scenarios.map((s) =>
-			PURCHASE_OPTIONS.map((choice) => calculateScenario(s, choice, gold)),
-		);
+		const matrix = scenarios.map((s) => comparePurchases(s, gold));
 		const selected = purchaseIndex(purchases);
 		return (
 			<main className="shell">

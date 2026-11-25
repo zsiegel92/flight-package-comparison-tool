@@ -596,6 +596,10 @@ export default function ScenarioCard(p: {
 							<strong>{cash(r.sunkExposure)}</strong>
 						</div>
 						<div>
+							<span>Expected last-minute Sunday backups on optional trips</span>
+							<strong>{fmt(r.optionalSundayBackups)}</strong>
+						</div>
+						<div>
 							<span>Expected flights booked with miles</span>
 							<strong>{fmt(r.awardFlights)}</strong>
 						</div>

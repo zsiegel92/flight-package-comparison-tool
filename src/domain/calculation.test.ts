@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateScenario } from "./calculation";
+import { calculateScenario, comparePurchases } from "./calculation";
 import { BASE } from "./presets";
 import { BONUS_MILES } from "./purchases";
 
@@ -14,6 +14,9 @@ const scenario = {
 	optionalReturn: "advance" as const,
 	fareFri: 100,
 	fareSun: 100,
+	christmasFare: 305,
+	christmasGoWildQuote: 0,
+	denSavingPerLeg: 0,
 	gwTaxes: 15,
 	lateSuccessFri: 100,
 	peakShareFri: 0,
@@ -43,6 +46,34 @@ describe("scenario calculation", () => {
 			pass,
 		);
 		expect(result.weekendCost).toBe(265);
+		expect(result.optionalSundayBackups).toBe(1);
+	});
+	it("does not rank a pass cheaper solely because planned paid visits were skipped", () => {
+		const [withoutPass, , withPass] = comparePurchases(
+			{
+				...scenario,
+				weekends: 10,
+				optionalWeekends: 10,
+				lateSuccessFri: 0,
+				sunkReturnPct: 0,
+			},
+			false,
+		);
+		expect(withPass.totalCost).toBeLessThan(withoutPass.totalCost);
+		expect(withPass.comparisonCost - withoutPass.comparisonCost).toBe(399);
+	});
+	it("adds back only the missed visits that would have been paid for", () => {
+		const [, , withPass, withPassAndDen] = comparePurchases(
+			{
+				...scenario,
+				replacePct: 50,
+				lateSuccessFri: 50,
+				denSavingPerLeg: 10,
+			},
+			false,
+		);
+		expect(withPass.comparisonCost - withPass.totalCost).toBe(50);
+		expect(withPassAndDen.comparisonCost - withPassAndDen.totalCost).toBe(50);
 	});
 	it("charges the optional return premium on completed trips and applies recovery on skipped trips", () => {
 		const result = calculateScenario(

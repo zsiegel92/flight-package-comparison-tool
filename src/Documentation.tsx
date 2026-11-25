@@ -14,22 +14,37 @@ export default function Documentation() {
 			</div>
 			<div className="doc-grid">
 				<div className="doc-panel">
-					<h3>What counts as a saving?</h3>
+					<h3>Where the preset fares come from</h3>
 					<p>
-						<b>
-							A booked GoWild leg saves only what you would actually have paid
-							for a regular Frontier ticket.
-						</b>{" "}
-						The normal fare defaults are illustrative, not observed PHL–MCO
-						price averages. Optional trips that fail to secure Friday are
-						skipped; the model claims no fare savings for those trips. If a
-						Sunday was prepaid, the forfeited portion is subtracted.
+						Frontier advertised date-level prices such as $63 for a December 4
+						Orlando departure and $82 for a December 13 Philadelphia return. The
+						listings can include member fares and cover all departure times. The
+						presets use $75–$150 for Friday and $95–$175 for Sunday to test the
+						cost of booking usable nonstop flights. The prices are planning
+						estimates. <Cite n={8} /> <Cite n={9} />
 					</p>
 					<p>
-						The optional-trip <b>replacement %</b> lets you distinguish airfare
-						truly avoided from new visits you would not have purchased.
-						Subjective value of new visits can be entered separately, and never
-						changes the cash-only headline.
+						Christmas is a separate committed trip. The presets use the quoted
+						$246 regular and $238 GoWild round trips for December 23, 2026 to
+						January 2, 2027. Early fees, backup fares and the value of
+						cancellation credits for other dates are editable assumptions.
+					</p>
+				</div>
+				<div className="doc-panel">
+					<h3>How missed visits affect the comparison</h3>
+					<p>
+						The comparison adds back the cost of weekends you skipped and would
+						otherwise have booked. It estimates that cost by running the
+						regular-fare plan twice, with all intended paid weekends and with
+						only the completed share, using the same card status, with Den off
+						and miles applied in both runs.
+					</p>
+					<p>
+						Net cash cost includes any forfeited return and the cost of any new
+						visits, with any usable travel credit treated as recovered value.
+						The optional-trip replacement percentage determines how many missed
+						visits count in the comparison. Subjective visit value is shown
+						separately in the scenario audit.
 					</p>
 				</div>
 				<div className="doc-panel">
@@ -43,8 +58,11 @@ export default function Documentation() {
 						<Cite n={2} />
 					</p>
 					<p>
-						Try 35%, 60%, and 85% inventory assumptions, then refine them from
-						your own checks over several Fridays and Sundays.
+						The three protected-Sunday presets share fares and booking policies
+						and use 45%, 60%, and 80% Friday success. All three assume one peak
+						Friday and one peak Sunday out of 15 planned weekends, rounded to 7%
+						per direction. Count your dates against Frontier’s calendar.{" "}
+						<Cite n={6} />
 					</p>
 				</div>
 				<div className="doc-panel">
@@ -68,8 +86,10 @@ export default function Documentation() {
 					<p>
 						Enter public fares in the regular and backup fare fields. Use your
 						observed average Discount Den saving per paid leg in the separate
-						Den field. The model charges $59.99 for Discount Den and applies the
-						GoWild pass discount once if either the card or Den qualifies.{" "}
+						Den field. The model uses your $59.99 membership assumption and
+						applies the GoWild pass discount once if either the card or Den
+						qualifies. Frontier lists $109.99 for a new member including
+						enrollment, which can change the decision.{" "}
 						<a href="https://www.flyfrontier.com/deals/discount-den/">
 							Frontier membership terms
 						</a>
@@ -86,10 +106,10 @@ export default function Documentation() {
 						premium, that you cannot recover as cash or useful credit.
 					</p>
 					<p>
-						Frontier says qualifying Economy fares and bundles can be canceled
-						without a cancellation fee for travel credit, rather than
-						necessarily a cash refund. Check the actual fare, credit conditions,
-						and whether the premium is returned before booking.{" "}
+						Frontier’s $149 Basic cancellation fee can consume the whole $125
+						prepaid Sunday fare. Qualifying Economy fares and bundles offer
+						travel credit without the cancellation fee. Value the credit based
+						on how much you expect to use.{" "}
 						<a
 							href="https://faq.flyfrontier.com/help/can-i-cancel-my-reservation"
 							target="_blank"
@@ -141,10 +161,10 @@ export default function Documentation() {
 					travel. The model spreads optional and committed weekends across the
 					year and uses miles on each expected regular weekend leg whenever the
 					balance covers an award and it saves cash. It assumes an award is
-					available at the scenario's mileage price, estimates eligible spending
-					from modeled fares, and makes earned miles available for later legs.
-					Gold applies throughout the modeled travel when selected with the
-					card.{" "}
+					available at the scenario's mileage price, including on late backups.
+					It estimates eligible spending from modeled fares and makes earned
+					miles available for later legs. Gold applies throughout the modeled
+					travel when selected with the card.{" "}
 					<a href="https://www.flyfrontier.com/frontiermiles/how-to-earn-miles/">
 						Frontier earning rates
 					</a>

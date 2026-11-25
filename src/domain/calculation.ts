@@ -5,6 +5,7 @@ import {
 	DEFAULT_PURCHASES,
 	DEN_FEE,
 	mileageRates,
+	PURCHASE_OPTIONS,
 	type Purchases,
 	passCost,
 } from "./purchases";
@@ -17,6 +18,34 @@ import type {
 } from "./types";
 
 const pct = (n: number) => Math.min(1, Math.max(0, n / 100));
+
+export function comparePurchases(scenario: Scenario, gold: boolean) {
+	const results = PURCHASE_OPTIONS.map((option) =>
+		calculateScenario(scenario, option, gold),
+	);
+
+	return results.map((result, i) => {
+		const { card, goWild } = PURCHASE_OPTIONS[i];
+		let missedVisitCost = 0;
+		if (goWild && result.skippedVisits > 0 && scenario.replacePct > 0) {
+			// Use the same no-pass, no-Den benchmark for both pass options.
+			const fullTravel = results[card ? 4 : 0];
+			const matchedTravel = calculateScenario(
+				{
+					...scenario,
+					replacePct: scenario.replacePct * result.optionalOut.probability,
+				},
+				{ card, goWild: false, discountDen: false },
+				gold,
+			);
+			missedVisitCost = Math.max(
+				0,
+				fullTravel.totalCost - matchedTravel.totalCost,
+			);
+		}
+		return { ...result, comparisonCost: result.totalCost + missedVisitCost };
+	});
+}
 
 export function calculateScenario(
 	s: Scenario,
@@ -165,6 +194,12 @@ export function calculateScenario(
 		completed * optionalReturn.gw +
 		committedCount * (commFri.gw + commSun.gw);
 	const successVisits = committedCount + completed;
+	const optionalSundayBackups =
+		goWild &&
+		(s.optionalReturn === "late-backup" ||
+			s.optionalReturn === "early-late-backup")
+			? completed * (1 - optionalReturn.gw)
+			: 0;
 	const regularLegs = Math.max(0, 2 * successVisits - expectedGwLegs);
 	const ancillarySavings =
 		card && s.ancillaryAwardMiles > 0 && s.ancillaryAwardMiles <= BONUS_MILES
@@ -263,6 +298,7 @@ export function calculateScenario(
 		optionalCount,
 		successVisits,
 		skippedVisits,
+		optionalSundayBackups,
 		expectedGwLegs,
 		awardFlights,
 		awardSavings,

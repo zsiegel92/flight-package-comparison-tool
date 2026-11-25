@@ -58,6 +58,22 @@ export const SOURCES = [
 		detail:
 			"GoWild passes automatically renew unless canceled within the applicable deadline; initial purchases are generally nonrefundable. Confirm the exact renewal details for your offer.",
 	},
+	{
+		id: 8,
+		short: "Orlando → Philadelphia fares",
+		title: "Frontier MCO–PHL advertised fares",
+		url: "https://flights.flyfrontier.com/en/flights-from-orlando-to-philadelphia",
+		detail:
+			"Advertised date-level fares provide a starting point for Friday pricing. Departure times and fare eligibility vary.",
+	},
+	{
+		id: 9,
+		short: "Philadelphia → Orlando fares",
+		title: "Frontier PHL–MCO advertised fares",
+		url: "https://flights.flyfrontier.com/en/flights-from-philadelphia-to-orlando",
+		detail:
+			"Advertised date-level fares provide a starting point for Sunday pricing. Check the flights that fit your return window.",
+	},
 ];
 export function Icon(p: { name: string; size?: number }) {
 	const map: Record<string, ReactNode> = {

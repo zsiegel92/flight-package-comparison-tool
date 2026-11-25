@@ -1,3 +1,4 @@
+import type { comparePurchases } from "./domain/calculation";
 import {
 	AWARD_TAXES_AND_FEES,
 	BONUS_MILES,
@@ -7,7 +8,7 @@ import {
 	type Purchases,
 	passCost,
 } from "./domain/purchases";
-import type { Result, Scenario } from "./domain/types";
+import type { Scenario } from "./domain/types";
 import { fmt } from "./format";
 
 const dollars = new Intl.NumberFormat("en-US", {
@@ -125,7 +126,7 @@ function productName(p: Purchases) {
 interface ComparisonData {
 	purchases: Purchases;
 	scenarios: Scenario[];
-	matrix: Result[][];
+	matrix: ReturnType<typeof comparePurchases>[];
 }
 
 export function Recommendation({
@@ -144,7 +145,7 @@ export function Recommendation({
 			?.slice(offset, offset + 4)
 			.reduce(
 				(winner, result, i) =>
-					result.totalCost < central[winner].totalCost - 0.005
+					result.comparisonCost < central[winner].comparisonCost - 0.005
 						? i + offset
 						: winner,
 				offset,
@@ -152,15 +153,12 @@ export function Recommendation({
 	const recommendation = PURCHASE_OPTIONS[best];
 	const noPass = central?.[offset + Number(recommendation.discountDen)];
 	const withPass = central?.[offset + 2 + Number(recommendation.discountDen)];
-	const passDelta = (noPass?.totalCost ?? 0) - (withPass?.totalCost ?? 0);
+	const passDelta =
+		(noPass?.comparisonCost ?? 0) - (withPass?.comparisonCost ?? 0);
 	const noDen = central?.[best - Number(recommendation.discountDen)];
 	const withDen = central?.[best - Number(recommendation.discountDen) + 1];
-	const denDelta = (noDen?.totalCost ?? 0) - (withDen?.totalCost ?? 0);
-	const passDifferences = matrix.map(
-		(row) => row[offset].totalCost - row[offset + 2].totalCost,
-	);
-	const favorable = passDifferences.filter((savings) => savings > 0.005).length;
-	const worstSavings = Math.min(...passDifferences);
+	const denDelta =
+		(noDen?.comparisonCost ?? 0) - (withDen?.comparisonCost ?? 0);
 	const perLeg = noDen?.expectedPaidLegs ? DEN_FEE / noDen.expectedPaidLegs : 0;
 
 	if (!central) return null;
@@ -174,15 +172,8 @@ export function Recommendation({
 				In {scenarios[caseIndex].name.replace(/^\d+ · /, "")}, with the
 				Mastercard {purchases.card ? "included" : "excluded"}, GoWild{" "}
 				{passDelta >= 0 ? "saves" : "adds"}{" "}
-				<strong>{money(Math.abs(passDelta))}</strong>. The pass saves money in{" "}
-				{favorable} of {matrix.length} scenarios with Den off.
-				{worstSavings < -0.005 && (
-					<>
-						{" "}
-						It adds as much as <strong>{money(-worstSavings)}</strong> when
-						fares and GoWild availability are less favorable.
-					</>
-				)}
+				<strong>{money(Math.abs(passDelta))}</strong> after accounting for
+				missed visits.
 			</p>
 			<p>
 				Discount Den {denDelta > 0 ? "saves" : "adds"}{" "}
@@ -221,7 +212,7 @@ export default function PurchaseComparison({
 }) {
 	const selected = purchaseIndex(purchases);
 	const lowestCosts = matrix.map((row) =>
-		Math.min(...row.map((result) => Math.round(result.totalCost * 100))),
+		Math.min(...row.map((result) => Math.round(result.comparisonCost * 100))),
 	);
 
 	return (
@@ -267,7 +258,12 @@ export default function PurchaseComparison({
 			</div>
 			<p className="purchase-note">
 				All totals with the card include the $100 already paid. It cancels out
-				when you compare GoWild and Den with the card held constant.
+				when you compare GoWild and Den with the card held constant. The model
+				uses {money(DEN_FEE)} for Den. Add $50 to Den options if checkout
+				charges the enrollment fee.{" "}
+				<a href="https://www.flyfrontier.com/deals/discount-den/">
+					Frontier membership terms
+				</a>
 			</p>
 			<h3>Perks and eligibility</h3>
 			<div className="comparison perk-grid">
@@ -335,9 +331,11 @@ export default function PurchaseComparison({
 			</div>
 			<h3>Projected Scenario Costs</h3>
 			<p className="purchase-note">
-				Scenarios defined below. Green marks the lowest expected cash cost in
-				each scenario. Totals include {money(AWARD_TAXES_AND_FEES)} in estimated
-				domestic taxes and fees per award leg.{" "}
+				Bold amounts show projected net cash cost. Green marks the lowest
+				comparison cost, which adds back the estimated regular-ticket cost of
+				missed weekends you would otherwise have booked. Cash totals include{" "}
+				{money(AWARD_TAXES_AND_FEES)} in estimated domestic taxes and fees per
+				award leg.{" "}
 				<a href="https://www.flyfrontier.com/frontiermiles/how-to-use-miles/">
 					Frontier award pricing
 				</a>
@@ -370,7 +368,7 @@ export default function PurchaseComparison({
 										scenario.weekends - result.successVisits,
 									);
 									const difference =
-										Math.round(result.totalCost * 100) - lowestCosts[j];
+										Math.round(result.comparisonCost * 100) - lowestCosts[j];
 									const isBest = difference === 0;
 									const className = [
 										i === selected ? "selected-purchases" : "",
@@ -384,6 +382,11 @@ export default function PurchaseComparison({
 											className={className || undefined}
 										>
 											<strong>{money(result.totalCost)}</strong>
+											{result.comparisonCost - result.totalCost >= 0.005 && (
+												<small>
+													{money(result.comparisonCost)} for comparison
+												</small>
+											)}
 											{Number(missedWeekends) > 0 && (
 												<small>
 													{missedWeekends} target weekends not taken
@@ -393,7 +396,7 @@ export default function PurchaseComparison({
 												<small className="best-choice-label">Best choice</small>
 											) : (
 												<small className="cost-difference">
-													+{money(difference / 100)} from optimal
+													+{money(difference / 100)} vs. lowest
 												</small>
 											)}
 										</td>

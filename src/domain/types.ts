@@ -70,6 +70,7 @@ export interface Result {
 	optionalCount: number;
 	successVisits: number;
 	skippedVisits: number;
+	optionalSundayBackups: number;
 	awardFlights: number;
 	awardSavings: number;
 	remainingMiles: number;
