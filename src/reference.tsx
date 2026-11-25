@@ -1,3 +1,4 @@
+import * as Tooltip from "@radix-ui/react-tooltip";
 import type { ReactNode } from "react";
 
 export const SOURCES = [
@@ -139,17 +140,43 @@ export function Icon(p: { name: string; size?: number }) {
 		</svg>
 	);
 }
+export function InfoTooltip({
+	text,
+	children,
+}: {
+	text: string;
+	children: ReactNode;
+}) {
+	return (
+		<Tooltip.Root>
+			<Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
+			<Tooltip.Portal>
+				<Tooltip.Content
+					className="info-tooltip"
+					sideOffset={6}
+					collisionPadding={12}
+				>
+					{text}
+					<Tooltip.Arrow className="info-tooltip-arrow" />
+				</Tooltip.Content>
+			</Tooltip.Portal>
+		</Tooltip.Root>
+	);
+}
+
 export function Cite(p: { n: number; tip?: string }) {
 	const s = SOURCES[p.n - 1];
 	return (
-		<a
-			href={s.url}
-			target="_blank"
-			rel="noopener noreferrer"
-			className="cite"
-			title={p.tip || s.title}
-		>
-			[{p.n}]
-		</a>
+		<InfoTooltip text={p.tip || s.title}>
+			<a
+				href={s.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="cite"
+				aria-label={s.title}
+			>
+				[{p.n}]
+			</a>
+		</InfoTooltip>
 	);
 }

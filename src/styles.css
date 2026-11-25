@@ -623,16 +623,27 @@ input::-webkit-outer-spin-button {
 }
 .q {
 	margin-left: 5px;
-	color: #9daaba;
-	border: 1px solid #cad3df;
-	border-radius: 50%;
-	font-size: 9px;
+	padding: 0;
+	color: #526579;
+	background: transparent;
+	border: 0;
 	display: inline-flex;
-	width: 13px;
-	height: 13px;
-	align-items: center;
-	justify-content: center;
+	vertical-align: middle;
 	cursor: help;
+}
+.info-tooltip {
+	z-index: 100;
+	max-width: min(300px, calc(100vw - 24px));
+	padding: 8px 12px;
+	border-radius: 6px;
+	background: #172b3a;
+	color: #fff;
+	font-size: 0.8125rem;
+	line-height: 1.4;
+	box-shadow: 0 4px 12px #172b3a33;
+}
+.info-tooltip-arrow {
+	fill: #172b3a;
 }
 .cite {
 	font-size: 10px;
@@ -961,7 +972,7 @@ footer {
 .scenario-grid {
 	display: grid;
 	grid-auto-flow: column;
-	grid-auto-columns: min(440px, 88vw);
+	grid-auto-columns: min(385px, 88vw);
 	grid-template-columns: none;
 	gap: 16px;
 	align-items: start;
@@ -992,10 +1003,6 @@ footer {
 	min-height: 0;
 }
 @media (max-width: 650px) {
-	.scenario-grid {
-		grid-template-columns: none;
-		grid-auto-columns: 88vw;
-	}
 	.card-header {
 		height: 185px;
 	}
@@ -1038,14 +1045,6 @@ footer {
 	margin: 8px 0 12px;
 	font-size: 0.9rem;
 }
-.enrollment {
-	display: inline-flex;
-	gap: 8px;
-	align-items: center;
-}
-.enrollment input {
-	width: 90px;
-}
 .recommendation {
 	margin: 20px 0;
 	padding: 16px 20px;
@@ -1053,7 +1052,7 @@ footer {
 	background: #eefaf6;
 	border-radius: 8px;
 }
-.recommendation h3 {
+.recommendation h2 {
 	margin: 0 0 8px;
 }
 .recommendation p {
@@ -1111,4 +1110,12 @@ footer {
 	bottom: 8px;
 	color: #965454;
 	font-size: 0.75rem;
+}
+
+.purchase-matrix th[scope="col"] {
+	min-width: 128px;
+	white-space: normal;
+}
+.purchase-matrix th[scope="row"] {
+	min-width: 160px;
 }

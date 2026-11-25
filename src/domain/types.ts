@@ -25,8 +25,6 @@ export interface Scenario {
 	christmasGoWildQuote: number;
 	denSavingPerLeg: number;
 	awardMilesPerFlight: number;
-	awardFlightShare: number;
-	awardFees: number;
 	ancillaryAwardMiles: number;
 	ancillaryAwardValue: number;
 	gwTaxes: number;
@@ -74,7 +72,8 @@ export interface Result {
 	skippedVisits: number;
 	awardFlights: number;
 	awardSavings: number;
-	remainingBonusMiles: number;
+	remainingMiles: number;
+	milesEarned: number;
 	ancillarySavings: number;
 	fixedCost: number;
 	christmasCost: number;

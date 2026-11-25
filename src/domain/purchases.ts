@@ -11,6 +11,15 @@ export const DEFAULT_PURCHASES: Purchases = {
 };
 export const CARD_FEE = 100;
 export const BONUS_MILES = 50_000;
+export const AWARD_TAXES_AND_FEES = 5.6;
+
+export function mileageRates(card: boolean, gold: boolean) {
+	return {
+		basic: card ? (gold ? 8 : 4) : 1,
+		cardSpend: card ? 5 : 0,
+		membership: card ? (gold ? 16 : 12) : 6,
+	};
+}
 export const PASS_PRICE = 399;
 export const PASS_DISCOUNT = 50;
 export const DEN_FEE = 59.99;

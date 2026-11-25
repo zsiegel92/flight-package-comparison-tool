@@ -20,8 +20,6 @@ export const BASE: Scenario = {
 	christmasGoWildQuote: 0,
 	denSavingPerLeg: 0,
 	awardMilesPerFlight: 10000,
-	awardFlightShare: 50,
-	awardFees: 5.6,
 	ancillaryAwardMiles: 0,
 	ancillaryAwardValue: 0,
 	gwTaxes: 15,

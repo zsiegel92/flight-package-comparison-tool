@@ -68,9 +68,8 @@ export default function Documentation() {
 					<p>
 						Enter public fares in the regular and backup fare fields. Use your
 						observed average Discount Den saving per paid leg in the separate
-						Den field. The model includes the membership and enrollment costs
-						and applies the GoWild pass discount once if either the card or Den
-						qualifies.{" "}
+						Den field. The model charges $59.99 for Discount Den and applies the
+						GoWild pass discount once if either the card or Den qualifies.{" "}
 						<a href="https://www.flyfrontier.com/deals/discount-den/">
 							Frontier membership terms
 						</a>
@@ -136,11 +135,22 @@ export default function Documentation() {
 				</div>
 				<p>
 					Target weekends not taken are reported separately. Cash totals include
-					any forfeited prepaid return for a skipped visit. The award share and
-					prices are estimates, and unused miles stay visible in the audit. The
-					model assumes one paid term per selected product and that benefits are
-					available for the modeled bookings. Confirm coverage for any travel
-					after your membership expires.
+					any forfeited prepaid return for a skipped visit. The miles balance
+					starts with the welcome miles when the card is selected, assuming the
+					bonus has posted. The pass and Christmas are booked before weekend
+					travel. The model spreads optional and committed weekends across the
+					year and uses miles on each expected regular weekend leg whenever the
+					balance covers an award and it saves cash. It assumes an award is
+					available at the scenario's mileage price, estimates eligible spending
+					from modeled fares, and makes earned miles available for later legs.
+					Gold applies throughout the modeled travel when selected with the
+					card.{" "}
+					<a href="https://www.flyfrontier.com/frontiermiles/how-to-earn-miles/">
+						Frontier earning rates
+					</a>
+					. The model assumes one paid term per selected product and that
+					benefits are available for the modeled bookings. Confirm coverage for
+					any travel after your membership expires.
 				</p>
 			</div>
 			<h3 className="sources-heading">

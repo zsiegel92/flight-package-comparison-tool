@@ -9,7 +9,10 @@ import {
 } from "./domain/purchases";
 import type { Scenario } from "./domain/types";
 import { clamp, numeric } from "./format";
-import PurchaseComparison, { purchaseIndex } from "./PurchaseComparison";
+import PurchaseComparison, {
+	purchaseIndex,
+	Recommendation,
+} from "./PurchaseComparison";
 import { Icon, SOURCES } from "./reference";
 import ScenarioCard, {
 	COMMITTED_OPTIONS,
@@ -79,14 +82,10 @@ function readInitial(): Scenario[] {
 interface AppState {
 	scenarios: Scenario[];
 	purchases: Purchases;
-	enrollment: number;
 	gold: boolean;
 }
 
-function readPurchaseSettings(): Pick<
-	AppState,
-	"purchases" | "enrollment" | "gold"
-> {
+function readPurchaseSettings(): Pick<AppState, "purchases" | "gold"> {
 	try {
 		const settings = JSON.parse(
 			localStorage.getItem("frontier-purchases-v1") || "null",
@@ -99,11 +98,10 @@ function readPurchaseSettings(): Pick<
 		)
 			return {
 				purchases: settings.purchases,
-				enrollment: clamp(numeric(settings.enrollment), 0, 500),
 				gold: settings.gold === true,
 			};
 	} catch {}
-	return { purchases: DEFAULT_PURCHASES, enrollment: 0, gold: false };
+	return { purchases: DEFAULT_PURCHASES, gold: false };
 }
 
 export default class App extends Component<Record<string, never>, AppState> {
@@ -122,16 +120,12 @@ export default class App extends Component<Record<string, never>, AppState> {
 		_: Readonly<Record<string, never>>,
 		prev: Readonly<AppState>,
 	) {
-		const { purchases, enrollment, gold } = this.state;
-		if (
-			purchases !== prev.purchases ||
-			enrollment !== prev.enrollment ||
-			gold !== prev.gold
-		) {
+		const { purchases, gold } = this.state;
+		if (purchases !== prev.purchases || gold !== prev.gold) {
 			try {
 				localStorage.setItem(
 					"frontier-purchases-v1",
-					JSON.stringify({ purchases, enrollment, gold }),
+					JSON.stringify({ purchases, gold }),
 				);
 			} catch {}
 		}
@@ -235,11 +229,9 @@ export default class App extends Component<Record<string, never>, AppState> {
 		reader.readAsText(f);
 	};
 	render() {
-		const { scenarios, purchases, enrollment, gold } = this.state;
+		const { scenarios, purchases, gold } = this.state;
 		const matrix = scenarios.map((s) =>
-			PURCHASE_OPTIONS.map((choice) =>
-				calculateScenario(s, choice, enrollment, gold),
-			),
+			PURCHASE_OPTIONS.map((choice) => calculateScenario(s, choice, gold)),
 		);
 		const selected = purchaseIndex(purchases);
 		return (
@@ -271,9 +263,13 @@ export default class App extends Component<Record<string, never>, AppState> {
 						Orlando–Philadelphia weekends and Christmas trip.
 					</p>
 				</section>
+				<Recommendation
+					purchases={purchases}
+					scenarios={scenarios}
+					matrix={matrix}
+				/>
 				<PurchaseComparison
 					purchases={purchases}
-					enrollment={enrollment}
 					gold={gold}
 					onGold={(value) => this.setState({ gold: value })}
 					onPurchase={(key, value) =>
@@ -281,7 +277,6 @@ export default class App extends Component<Record<string, never>, AppState> {
 							purchases: { ...state.purchases, [key]: value },
 						}))
 					}
-					onEnrollment={(value) => this.setState({ enrollment: value })}
 					scenarios={scenarios}
 					matrix={matrix}
 				/>

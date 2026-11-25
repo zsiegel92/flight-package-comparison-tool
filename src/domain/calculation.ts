@@ -1,8 +1,10 @@
 import {
+	AWARD_TAXES_AND_FEES,
 	BONUS_MILES,
 	CARD_FEE,
 	DEFAULT_PURCHASES,
 	DEN_FEE,
+	mileageRates,
 	type Purchases,
 	passCost,
 } from "./purchases";
@@ -19,7 +21,6 @@ const pct = (n: number) => Math.min(1, Math.max(0, n / 100));
 export function calculateScenario(
 	s: Scenario,
 	purchases: Purchases = DEFAULT_PURCHASES,
-	denEnrollment = 0,
 	gold = false,
 ): Result {
 	const { card, goWild, discountDen } = purchases;
@@ -59,7 +60,7 @@ export function calculateScenario(
 	const earlyEffective = (dir: "fri" | "sun") =>
 		gwFare(dir, true) < base(dir) ? earlyProb(dir) : 0;
 	const avoidableFare = (dir: "fri" | "sun", late = false) =>
-		Math.max(0, fare(dir, late) - s.awardFees);
+		Math.max(0, fare(dir, late) - AWARD_TAXES_AND_FEES);
 	const advance = (dir: "fri" | "sun"): LegPlan => ({
 		cost: base(dir),
 		gw: 0,
@@ -173,20 +174,6 @@ export function calculateScenario(
 				)
 			: 0;
 	const ancillaryMiles = ancillarySavings > 0 ? s.ancillaryAwardMiles : 0;
-	const flightMiles = BONUS_MILES - ancillaryMiles;
-	const awardFlights =
-		card && s.awardMilesPerFlight > 0
-			? Math.min(
-					regularLegs * pct(s.awardFlightShare),
-					flightMiles / s.awardMilesPerFlight,
-				)
-			: 0;
-	const awardableFare =
-		attempted * out.awardableFare +
-		completed * optionalReturn.awardableFare +
-		committedCount * (commFri.awardableFare + commSun.awardableFare);
-	const awardSavings =
-		regularLegs > 0 ? (awardFlights / regularLegs) * awardableFare : 0;
 	const christmasRegular =
 		Math.max(0, s.christmasFare - 2 * denSaving) + 2 * baseBag;
 	const christmasUsesGoWild =
@@ -196,10 +183,78 @@ export function calculateScenario(
 	const christmasCost = christmasUsesGoWild
 		? s.christmasGoWildQuote
 		: christmasRegular;
+	const rates = mileageRates(card, gold);
+	const passPurchase = goWild ? passCost(purchases) : 0;
+	const startingMiles = card ? BONUS_MILES : 0;
+	const milesFromInitialSpend =
+		(passPurchase + (discountDen ? DEN_FEE : 0)) *
+			(rates.membership + rates.cardSpend) +
+		christmasCost * rates.cardSpend +
+		(christmasUsesGoWild
+			? 0
+			: Math.max(0, christmasRegular - 2 * baseBag) * rates.basic);
+	let milesEarned = milesFromInitialSpend;
+	let milesBalance = startingMiles - ancillaryMiles + milesEarned;
+	let awardFlights = 0;
+	let awardSavings = 0;
+
+	// Walk expected bookings in trip order. Earned miles become usable on a later leg.
+	const bookLeg = (
+		weight: number,
+		cost: number,
+		gw: number,
+		awardableFare: number,
+	) => {
+		if (weight <= 0) return;
+		const regularWeight = Math.max(0, weight - gw);
+		const redeemed =
+			regularWeight > 0 &&
+			awardableFare > 0 &&
+			s.awardMilesPerFlight > 0 &&
+			milesBalance >= s.awardMilesPerFlight
+				? regularWeight
+				: 0;
+		const savings = redeemed > 0 ? awardableFare : 0;
+		awardFlights += redeemed;
+		awardSavings += savings;
+		const eligibleFare = Math.max(0, cost - gw * s.gwTaxes);
+		const basicFare = Math.max(
+			0,
+			eligibleFare - savings - redeemed * AWARD_TAXES_AND_FEES,
+		);
+		const earned = (cost - savings) * rates.cardSpend + basicFare * rates.basic;
+		milesEarned += earned;
+		milesBalance += earned - redeemed * s.awardMilesPerFlight;
+	};
+	for (let i = 0; i < s.weekends; i++) {
+		// Spread optional and committed trips evenly across the year.
+		const isOptional =
+			Math.floor(((i + 1) * optionalCount) / s.weekends) >
+			Math.floor((i * optionalCount) / s.weekends);
+		if (isOptional) {
+			const weight = goWild ? 1 : replacement;
+			bookLeg(
+				weight * out.probability,
+				weight * out.weightedCost,
+				weight * out.weightedGw,
+				weight * out.awardableFare,
+			);
+			const returnWeight = weight * out.probability;
+			bookLeg(
+				returnWeight,
+				returnWeight * optionalReturn.cost,
+				returnWeight * optionalReturn.gw,
+				returnWeight * optionalReturn.awardableFare,
+			);
+		} else {
+			bookLeg(1, commFri.cost, commFri.gw, commFri.awardableFare);
+			bookLeg(1, commSun.cost, commSun.gw, commSun.awardableFare);
+		}
+	}
 	const fixedCost =
 		(card ? CARD_FEE : 0) +
-		(discountDen ? DEN_FEE + denEnrollment : 0) +
-		(goWild ? passCost(purchases) + s.annualFriction : 0);
+		(discountDen ? DEN_FEE : 0) +
+		(goWild ? passPurchase + s.annualFriction : 0);
 	const totalCost =
 		fixedCost + christmasCost + weekendCost - awardSavings - ancillarySavings;
 
@@ -212,9 +267,8 @@ export function calculateScenario(
 		awardFlights,
 		awardSavings,
 		ancillarySavings,
-		remainingBonusMiles: card
-			? flightMiles - awardFlights * s.awardMilesPerFlight
-			: 0,
+		milesEarned,
+		remainingMiles: milesBalance,
 		fixedCost,
 		christmasCost,
 		weekendCost,

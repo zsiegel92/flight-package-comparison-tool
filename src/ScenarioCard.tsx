@@ -1,7 +1,17 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import type { Result, Scenario } from "./domain/types";
 import { cash, clamp, fmt, numeric } from "./format";
-import { Cite, Icon } from "./reference";
+import { Cite, Icon, InfoTooltip } from "./reference";
+
+function FieldHelp({ label, help }: { label: string; help: string }) {
+	return (
+		<InfoTooltip text={help}>
+			<button type="button" className="q" aria-label={`About ${label}`}>
+				<Icon name="info" size={14} />
+			</button>
+		</InfoTooltip>
+	);
+}
 
 function Field(p: {
 	label: string;
@@ -13,20 +23,18 @@ function Field(p: {
 	help?: string;
 	src?: number;
 }) {
+	const id = useId();
 	return (
-		<label className="field">
+		<div className="field">
 			<span className="field-label">
-				{p.label}
+				<label htmlFor={id}>{p.label}</label>
 				{p.src ? <Cite n={p.src} /> : null}
-				{p.help ? (
-					<span className="q" title={p.help}>
-						?
-					</span>
-				) : null}
+				{p.help && <FieldHelp label={p.label} help={p.help} />}
 			</span>
 			<span className="field-input">
 				{p.unit === "$" ? <b>$</b> : null}
 				<input
+					id={id}
 					type="number"
 					value={p.value}
 					step="any"
@@ -44,7 +52,7 @@ function Field(p: {
 				/>
 				{p.unit === "%" ? <em>%</em> : null}
 			</span>
-		</label>
+		</div>
 	);
 }
 function Select(p: {
@@ -55,25 +63,26 @@ function Select(p: {
 	help?: string;
 	src?: number;
 }) {
+	const id = useId();
 	return (
-		<label className="field select-field">
+		<div className="field select-field">
 			<span className="field-label">
-				{p.label}
+				<label htmlFor={id}>{p.label}</label>
 				{p.src ? <Cite n={p.src} /> : null}
-				{p.help ? (
-					<span className="q" title={p.help}>
-						?
-					</span>
-				) : null}
+				{p.help && <FieldHelp label={p.label} help={p.help} />}
 			</span>
-			<select value={p.value} onChange={(e) => p.onChange(e.target.value)}>
+			<select
+				id={id}
+				value={p.value}
+				onChange={(e) => p.onChange(e.target.value)}
+			>
 				{p.options.map((o) => (
 					<option key={o.id} value={o.id}>
 						{o.name}
 					</option>
 				))}
 			</select>
-		</label>
+		</div>
 	);
 }
 function Section(p: {
@@ -156,22 +165,24 @@ export default function ScenarioCard(p: {
 						SCENARIO {String(p.index + 1).padStart(2, "0")}
 					</span>
 					<div className="icon-actions">
-						<button
-							type="button"
-							title="Duplicate this scenario"
-							aria-label="Duplicate scenario"
-							onClick={() => p.onCopy(s.id)}
-						>
-							<Icon name="copy" />
-						</button>
-						<button
-							type="button"
-							title="Delete scenario"
-							aria-label="Delete scenario"
-							onClick={() => p.onDelete(s.id)}
-						>
-							<Icon name="trash" />
-						</button>
+						<InfoTooltip text="Duplicate this scenario">
+							<button
+								type="button"
+								aria-label="Duplicate scenario"
+								onClick={() => p.onCopy(s.id)}
+							>
+								<Icon name="copy" />
+							</button>
+						</InfoTooltip>
+						<InfoTooltip text="Delete scenario">
+							<button
+								type="button"
+								aria-label="Delete scenario"
+								onClick={() => p.onDelete(s.id)}
+							>
+								<Icon name="trash" />
+							</button>
+						</InfoTooltip>
 					</div>
 				</div>
 				<input
@@ -290,9 +301,9 @@ export default function ScenarioCard(p: {
 						{fld("christmasFare", "Christmas 2026 regular round trip", "$")}
 						{fld(
 							"christmasGoWildQuote",
-							"Confirmed Christmas GoWild round trip",
+							"Christmas GoWild round-trip quote",
 							"$",
-							"Enter the all-in quote including taxes, peak and early charges, and any bags. Leave at zero to book regular fares now.",
+							"Enter the quoted price for both Christmas flights if GoWild seats are available. Include taxes, early booking and peak charges, and any bags. Leave at $0 to model a regular cash booking.",
 						)}
 						{fld(
 							"denSavingPerLeg",
@@ -301,15 +312,6 @@ export default function ScenarioCard(p: {
 							"Compare the public and member fares for your dates. Average across all booked legs, including those without a discount.",
 						)}
 						{fld("awardMilesPerFlight", "Miles per award flight")}
-						{fld(
-							"awardFlightShare",
-							"Regular weekend flights with usable awards",
-							"%",
-							undefined,
-							undefined,
-							100,
-						)}
-						{fld("awardFees", "Award taxes and fees", "$")}
 						{fld("ancillaryAwardMiles", "Bonus miles reserved for extras")}
 						{fld(
 							"ancillaryAwardValue",
@@ -594,7 +596,7 @@ export default function ScenarioCard(p: {
 							<strong>{cash(r.sunkExposure)}</strong>
 						</div>
 						<div>
-							<span>Flights booked with bonus miles</span>
+							<span>Expected flights booked with miles</span>
 							<strong>{fmt(r.awardFlights)}</strong>
 						</div>
 						<div>
@@ -602,10 +604,12 @@ export default function ScenarioCard(p: {
 							<strong>{cash(r.awardSavings + r.ancillarySavings)}</strong>
 						</div>
 						<div>
-							<span>Unused bonus miles</span>
-							<strong>
-								{Math.round(r.remainingBonusMiles).toLocaleString()}
-							</strong>
+							<span>Miles earned from modeled purchases</span>
+							<strong>{Math.round(r.milesEarned).toLocaleString()}</strong>
+						</div>
+						<div>
+							<span>Unused miles at end of scenario</span>
+							<strong>{Math.round(r.remainingMiles).toLocaleString()}</strong>
 						</div>
 						<div className="audit-total">
 							<span>Expected total cash cost</span>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AWARD_TAXES_AND_FEES } from "./domain/purchases";
 
 const fields = [
 	{ key: "mcoMiles", label: "MCO → PHL award miles", min: 1, initial: "5000" },
@@ -9,13 +10,13 @@ const fields = [
 		key: "mcoFees",
 		label: "MCO → PHL award taxes and fees ($)",
 		min: 0,
-		initial: "5.60",
+		initial: AWARD_TAXES_AND_FEES.toFixed(2),
 	},
 	{
 		key: "phlFees",
 		label: "PHL → MCO award taxes and fees ($)",
 		min: 0,
-		initial: "5.60",
+		initial: AWARD_TAXES_AND_FEES.toFixed(2),
 	},
 ];
 
@@ -74,10 +75,9 @@ export default function AwardMileEstimator() {
 			</p>
 			<p>
 				Value = (cash fare you would otherwise pay − award cash charges) ÷
-				miles. Enter a representative cents-per-mile value in each scenario’s
-				card settings. Compare equivalent tickets and account for rewards
-				forgone on the cash fare if material. Examples are illustrative, not
-				live prices.
+				miles. Use your quotes to choose the miles per award flight in each
+				scenario. The estimator uses the cash charges entered here, and the
+				projections use the shared domestic award estimate.
 			</p>
 		</section>
 	);
